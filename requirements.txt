@@ -9,8 +9,6 @@ sqlparse==0.5.5
 tzdata==2025.3
 PyMuPDF
 google-generativeai
-sentence-transformers
-torch
 python-telegram-bot
 celery
 redis

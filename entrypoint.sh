@@ -4,6 +4,11 @@ set -e
 # Esperar banco de dados subir (prática recomendada, embora as vezes db suba rápido)
 sleep 5
 
+if [ "$USE_LOCAL_EMBEDDINGS" = "True" ] || [ "$USE_LOCAL_EMBEDDINGS" = "true" ] || [ "$USE_LOCAL_EMBEDDINGS" = "1" ]; then
+    echo "Baixando dependências pesadas de IA Local (PyTorch)... Isso pode demorar!"
+    pip install --no-cache-dir -r requirements-local-ai.txt
+fi
+
 if [ "$1" = 'web' ]; then
     echo "Aplicando migrações..."
     python manage.py migrate --noinput

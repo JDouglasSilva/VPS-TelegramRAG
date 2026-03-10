@@ -5,9 +5,6 @@ import environ
 from django.conf import settings
 from .models import Document, VectorEntry, Organization, ChatSession, ChatMessage
 import time
-from sentence_transformers import SentenceTransformer
-import torch
-
 class LocalEmbeddingService:
     _instance = None
     _model = None
@@ -15,6 +12,10 @@ class LocalEmbeddingService:
     @classmethod
     def get_model(cls):
         if cls._model is None:
+            # Importa apenas aqui dentro para não explodir por falta de memória/disco na VPS base
+            from sentence_transformers import SentenceTransformer
+            import torch
+            
             # Modelo robusto para português e rápido
             cls._model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
             if torch.cuda.is_available():
@@ -26,6 +27,23 @@ class LocalEmbeddingService:
         embedding = model.encode(text, convert_to_tensor=False)
         return embedding.tolist()
 
+class GeminiEmbeddingService:
+    def __init__(self):
+        env = environ.Env()
+        environ.Env.read_env(os.path.join(settings.BASE_DIR, '.env'), overwrite=True)
+        self.api_key = env('GEMINI_API_KEY', default='SUA_CHAVE_AQUI')
+        if self.api_key != 'SUA_CHAVE_AQUI':
+            genai.configure(api_key=self.api_key)
+            
+    def embed(self, text):
+        # Usando o modelo textual de embedding do Gemini
+        result = genai.embed_content(
+            model="models/text-embedding-004",
+            content=text,
+            task_type="retrieval_document",
+        )
+        return result['embedding']
+
 class IngestionService:
     def __init__(self):
         env = environ.Env()
@@ -33,7 +51,12 @@ class IngestionService:
         self.api_key = env('GEMINI_API_KEY', default='SUA_CHAVE_AQUI')
         if self.api_key != 'SUA_CHAVE_AQUI':
             genai.configure(api_key=self.api_key)
-        self.embed_service = LocalEmbeddingService()
+            
+        use_local = env.bool('USE_LOCAL_EMBEDDINGS', default=False)
+        if use_local:
+            self.embed_service = LocalEmbeddingService()
+        else:
+            self.embed_service = GeminiEmbeddingService()
 
     def extract_text_from_pdf(self, pdf_path):
         """Extrai texto e metadados de página de um PDF."""
@@ -102,7 +125,12 @@ class ChatService:
         if self.api_key != 'SUA_CHAVE_AQUI':
             genai.configure(api_key=self.api_key)
         self.model_name_chat = "models/gemini-flash-latest"
-        self.embed_service = LocalEmbeddingService()
+        
+        use_local = env.bool('USE_LOCAL_EMBEDDINGS', default=False)
+        if use_local:
+            self.embed_service = LocalEmbeddingService()
+        else:
+            self.embed_service = GeminiEmbeddingService()
 
     def get_query_embedding(self, query):
         return self.embed_service.embed(query)

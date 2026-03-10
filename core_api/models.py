@@ -50,11 +50,19 @@ def trigger_document_processing(sender, instance, created, **kwargs):
     if created:
         from .tasks import process_document_task
         process_document_task.delay(instance.id)
+import os
+import environ
+from django.conf import settings
+
+env = environ.Env()
+use_local = env.bool('USE_LOCAL_EMBEDDINGS', default=False)
+VECTOR_DIMS = 384 if use_local else 768
+
 class VectorEntry(models.Model):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='vectors')
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='vectors')
     content = models.TextField()
-    embedding = VectorField(dimensions=384)  # text-embedding-004 do Gemini tem 768 dimensões por padrão
+    embedding = VectorField(dimensions=VECTOR_DIMS)
     page_number = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -16,14 +16,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia e instala as dependências do Python
-COPY requirements.txt /app/
+# Copia e instala as dependências padrão
+COPY requirements.txt requirements-local-ai.txt /app/
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Pré-baixa o modelo do sentence-transformers (Opcional, mas excelente para acelerar a subida)
-# Basta importar no contêiner durante o build
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')"
 
 # Copia o restante do código para o container
 COPY . /app/
