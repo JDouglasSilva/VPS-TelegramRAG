@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
     curl \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia e instala as dependências padrão
@@ -24,11 +25,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia o restante do código para o container
 COPY . /app/
 
-# Prepara os scripts de inicialização
-COPY entrypoint.sh start_all.sh /app/
-RUN chmod +x /app/entrypoint.sh /app/start_all.sh
+# Copia o arquivo de configuração do Supervisor
+COPY supervisord.conf /app/supervisord.conf
 
 # Porta que o web app vai escutar
 EXPOSE 8000
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-c", "/app/supervisord.conf"]
