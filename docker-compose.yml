@@ -1,0 +1,76 @@
+version: '3.8'
+
+x-app-base: &app-base
+  build: .
+  # Permite carregar o arquivo .env se estiver no mesmo diretorio
+  env_file:
+    - .env
+  # Conexão com os demais serviços
+  environment:
+    - DATABASE_URL=postgres://meusecretuser:meusecretpass@db:5432/rag_db
+    - CELERY_BROKER_URL=redis://redis:6379/0
+    - CELERY_RESULT_BACKEND=redis://redis:6379/0
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
+services:
+  db:
+    image: ankane/pgvector:latest
+    restart: always
+    environment:
+      POSTGRES_USER: meusecretuser
+      POSTGRES_PASSWORD: meusecretpass
+      POSTGRES_DB: rag_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meusecretuser -d rag_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  web:
+    <<: *app-base
+    restart: always
+    command: web
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+
+  bot:
+    <<: *app-base
+    restart: always
+    command: bot
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+
+  celery_worker:
+    <<: *app-base
+    restart: always
+    command: celery
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
