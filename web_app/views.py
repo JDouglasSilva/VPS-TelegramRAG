@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from core_api.models import Member
 
 def login_view(request):
+    print("Nova versão de teste implantada na ShardCloud!")
     if request.method == 'POST':
         u = request.POST.get('username')
         p = request.POST.get('password')
