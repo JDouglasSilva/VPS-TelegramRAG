@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login - RAG Enterprise</title>
+    <link rel="stylesheet" href="/static/web_app/css/styles.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 24px;
+            width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        input {
+            width: 100%;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            margin-bottom: 1rem;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <h2 style="margin-bottom: 2rem; text-align: center;">Bem-vindo</h2>
+        <form method="post">
+            {% csrf_token %}
+            <input type="text" name="username" placeholder="Usuário" required>
+            <input type="password" name="password" placeholder="Senha" required>
+            <button type="submit" class="new-chat-btn" style="width: 100%; margin-top: 1rem;">Entrar</button>
+        </form>
+        {% if error %}
+        <p style="color: #ef4444; margin-top: 1rem; text-align: center; font-size: 0.9rem;">{{ error }}</p>
+        {% endif %}
+    </div>
+</body>
+
+</html>

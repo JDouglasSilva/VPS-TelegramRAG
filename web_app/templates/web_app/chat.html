@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise RAG Chat</title>
+    <link rel="stylesheet" href="/static/web_app/css/styles.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+</head>
+
+<body>
+    <div class="sidebar">
+        <h2 style="font-weight: 600; letter-spacing: -1px;">RAG <span style="color: var(--primary);">Enterprise</span>
+        </h2>
+        <button class="new-chat-btn" id="newChat">
+            <span>+</span> Novo Chat
+        </button>
+        <div class="chat-history" id="chatHistory">
+            <!-- Items via JS -->
+        </div>
+        <div style="border-top:1px solid var(--border); padding-top:1rem;">
+            <p style="font-size:0.8rem; color:var(--text-muted);">Usuário: {{ user.username }}</p>
+            <a href="/admin/logout/" style="color:var(--text-muted); font-size:0.8rem;">Sair</a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h3 id="chatTitle">Novo Chat</h3>
+            <div class="actions">
+                <button class="sources-btn" onclick="showUpload()">Upload PDF</button>
+            </div>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="message bot">
+                Olá! Como posso ajudar você hoje com os documentos da sua organização?
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-wrapper">
+                <input type="text" id="userInput" placeholder="Faça uma pergunta sobre seus documentos...">
+                <button class="send-btn" id="sendBtn">→</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Fontes -->
+    <div class="modal" id="sourcesModal">
+        <div class="modal-content">
+            <h3>Fontes do Contexto</h3>
+            <div id="sourcesList" style="margin-top:1rem; display:flex; flex-direction:column; gap:1rem;"></div>
+            <button class="new-chat-btn" style="margin-top:2rem; width:100%;"
+                onclick="closeModal('sourcesModal')">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Upload -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <h3>Adicionar Documento PDF</h3>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin:1rem 0;">Membros contribuidores podem subir
+                novos arquivos para a base de RAG.</p>
+            <input type="file" id="fileInput" accept=".pdf" style="padding: 1rem 0;">
+            <div id="uploadStatus" style="font-size:0.8rem; margin-top:0.5rem;"></div>
+            <div style="display:flex; gap:1rem; margin-top:2rem;">
+                <button class="new-chat-btn" style="background:var(--glass); flex:1;"
+                    onclick="closeModal('uploadModal')">Cancelar</button>
+                <button class="new-chat-btn" style="flex:1;" id="uploadBtn">Subir PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/web_app/js/chat.js"></script>
+</body>
+
+</html>
