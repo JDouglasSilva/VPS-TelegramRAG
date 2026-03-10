@@ -28,9 +28,9 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 # Copia o restante do código para o container
 COPY . /app/
 
-# Prepara o script de inicialização
-COPY entrypoint.sh /app/
-RUN chmod +x /app/entrypoint.sh
+# Prepara os scripts de inicialização
+COPY entrypoint.sh start_all.sh /app/
+RUN chmod +x /app/entrypoint.sh /app/start_all.sh
 
 # Porta que o web app vai escutar
 EXPOSE 8000

@@ -22,7 +22,11 @@ elif [ "$1" = 'celery' ]; then
     echo "Iniciando worker do Celery..."
     exec celery -A telegram_rag_project worker -l INFO
 
+elif [ "$1" = 'all' ]; then
+    echo "Iniciando todos os serviços (Web + Bot + Celery)..."
+    exec bash /app/start_all.sh
+
 else
-    echo "Comando não reconhecido. Use: web, bot ou celery."
+    echo "Comando não reconhecido. Use: web, bot, celery ou all."
     exec "$@"
 fi
