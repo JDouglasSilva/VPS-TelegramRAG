@@ -10,7 +10,9 @@ class ChatViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         # Apenas as sessões do usuário atual
-        return ChatSession.objects.filter(user=self.request.user)
+        if self.request.user.is_authenticated:
+            return ChatSession.objects.filter(user=self.request.user)
+        return ChatSession.objects.none()
 
     def create(self, request, *args, **kwargs):
         kb_id = request.data.get('knowledge_base')
@@ -50,8 +52,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         # Apenas documentos da org atual do user (para o upload modal)
-        member = self.request.user.membership
-        return Document.objects.filter(knowledge_base__organization=member.organization)
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'membership'):
+            member = self.request.user.membership
+            return Document.objects.filter(knowledge_base__organization=member.organization)
+        return Document.objects.none()
 
     def perform_create(self, serializer):
         kb_id = self.request.data.get('knowledge_base')
