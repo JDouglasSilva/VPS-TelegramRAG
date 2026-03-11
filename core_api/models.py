@@ -29,6 +29,21 @@ class Member(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.organization.name} ({self.role})"
 
+class KnowledgeBase(models.Model):
+    class AccessLevel(models.TextChoices):
+        PUBLIC = 'PUBLIC', 'Público (Qualquer visitante na internet)'
+        INTERNAL = 'INTERNAL', 'Interno (Todos da mesma Organização)'
+        PRIVATE = 'PRIVATE', 'Privado (Apenas eu e Administradores)'
+
+    name = models.CharField(max_length=255)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='knowledge_bases')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_bases')
+    access_level = models.CharField(max_length=20, choices=AccessLevel.choices, default=AccessLevel.INTERNAL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_access_level_display()})"
+
 class Document(models.Model):
     class Status(models.TextChoices):
         PROCESSING = 'PROCESSING', 'Processando'
@@ -38,7 +53,7 @@ class Document(models.Model):
     file = models.FileField(upload_to='documents/%Y/%m/%d/')
     filename = models.CharField(max_length=255)
     uploader = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='documents')
+    knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='documents')
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PROCESSING)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -60,7 +75,7 @@ VECTOR_DIMS = 384 if use_local else 768
 
 class VectorEntry(models.Model):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='vectors')
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='vectors')
+    knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='vectors')
     content = models.TextField()
     embedding = VectorField(dimensions=VECTOR_DIMS)
     page_number = models.IntegerField(null=True, blank=True)
@@ -68,17 +83,18 @@ class VectorEntry(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['organization']),
+            models.Index(fields=['knowledge_base']),
         ]
 
 class ChatSession(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='chat_sessions')
     title = models.CharField(max_length=255, default="Novo Chat")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.title} - {self.user.username}"
+        user_name = self.user.username if self.user else 'Guest'
+        return f"{self.title} - {user_name} ({self.knowledge_base.name})"
 
 class ChatMessage(models.Model):
     class Sender(models.TextChoices):

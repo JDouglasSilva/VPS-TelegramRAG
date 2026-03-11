@@ -100,7 +100,7 @@ class IngestionService:
                     # Salvar no banco vetorial
                     VectorEntry.objects.create(
                         document=document,
-                        organization=document.organization,
+                        knowledge_base=document.knowledge_base,
                         content=chunk_content,
                         embedding=embedding,
                         page_number=page["page_number"]
@@ -135,12 +135,12 @@ class ChatService:
     def get_query_embedding(self, query):
         return self.embed_service.embed(query)
 
-    def retrieve_context(self, query_embedding, organization_id, top_k=12):
+    def retrieve_context(self, query_embedding, knowledge_base_id, top_k=12):
         from pgvector.django import CosineDistance
         
         # Aumentado para 1 service para pegar mais contexto
         results = VectorEntry.objects.filter(
-            organization_id=organization_id
+            knowledge_base_id=knowledge_base_id
         ).annotate(
             distance=CosineDistance('embedding', query_embedding)
         ).order_by('distance')[:top_k]
@@ -154,7 +154,7 @@ class ChatService:
         query_embedding = self.get_query_embedding(user_query)
         
         # 2. Busca de contexto
-        context_chunks = self.retrieve_context(query_embedding, session.organization.id)
+        context_chunks = self.retrieve_context(query_embedding, session.knowledge_base.id)
         
         # 3. Formatação do contexto e fontes
         context_text = "\n\n".join([f"--- Fonte: {c.document.filename} (Pag {c.page_number}) ---\n{c.content}" for c in context_chunks])
@@ -194,7 +194,7 @@ class ChatService:
             response = model.generate_content(prompt)
             answer = response.text
         else:
-            answer = f"[MOCK RESPONSE] Baseado nos documentos de {session.organization.name}, encontrei informações sobre: " + ", ".join([c.document.filename for c in context_chunks])
+            answer = f"[MOCK RESPONSE] Baseado nos documentos de {session.knowledge_base.name}, encontrei informações sobre: " + ", ".join([c.document.filename for c in context_chunks])
 
         # 7. Salvar mensagens
         ChatMessage.objects.create(session=session, sender=ChatMessage.Sender.USER, content=user_query)
