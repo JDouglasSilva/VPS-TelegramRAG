@@ -19,17 +19,33 @@
         <div class="chat-history" id="chatHistory">
             <!-- Items via JS -->
         </div>
-        <div style="border-top:1px solid var(--border); padding-top:1rem;">
-            <p style="font-size:0.8rem; color:var(--text-muted);">Usuário: {{ user.username }}</p>
-            <a href="/admin/logout/" style="color:var(--text-muted); font-size:0.8rem;">Sair</a>
+        <div style="border-top:1px solid var(--border); padding-top:1rem; display:flex; flex-direction:column; gap:8px;">
+            {% if user.is_authenticated %}
+                <p style="font-size:0.8rem; color:var(--text-muted); margin:0;">Usuário: <b>{{ user.username }}</b></p>
+                {% if user.membership.role != 'USER' %}
+                    <a href="{% url 'dashboard' %}" style="color:var(--primary); font-size:0.8rem; text-decoration:none;">Painel Gestão (Bases/Membros)</a>
+                {% endif %}
+                <a href="/admin/logout/" style="color:var(--text-muted); font-size:0.8rem; text-decoration:none;">Sair</a>
+            {% else %}
+                <p style="font-size:0.8rem; color:var(--text-muted); margin:0;">Visitante Anônimo</p>
+                <a href="{% url 'login' %}" style="color:var(--primary); font-size:0.8rem; text-decoration:none;">Login Colaborador</a>
+            {% endif %}
         </div>
     </div>
 
     <div class="main-content">
         <div class="header">
             <h3 id="chatTitle">Novo Chat</h3>
-            <div class="actions">
-                <button class="sources-btn" onclick="showUpload()">Upload PDF</button>
+            <div class="actions" style="display:flex; gap:10px; align-items:center;">
+                <select id="activeKb" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:5px 10px; border-radius:6px; font-size:0.9rem;">
+                    <option value="" disabled selected>Selecione uma Base...</option>
+                    {% for kb in knowledge_bases %}
+                        <option value="{{ kb.id }}">{{ kb.name }} ({{ kb.get_access_level_display }})</option>
+                    {% endfor %}
+                </select>
+                {% if user.is_authenticated and user.membership.role != 'USER' %}
+                <button class="sources-btn" onclick="showUpload()" style="margin-left: 10px;">Upload PDF</button>
+                {% endif %}
             </div>
         </div>
 

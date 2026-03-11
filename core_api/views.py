@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import ChatSession, ChatMessage, Organization, Document
+from .models import ChatSession, ChatMessage, Organization, Document, KnowledgeBase
 from .serializers import ChatSessionSerializer, ChatMessageSerializer, DocumentSerializer
 from .services import ChatService
 
@@ -13,11 +13,18 @@ class ChatViewSet(viewsets.ModelViewSet):
         return ChatSession.objects.filter(user=self.request.user)
 
     def create(self, request, *args, **kwargs):
-        # Simplificação: Pega a primeira organização do usuário
-        member = request.user.membership
+        kb_id = request.data.get('knowledge_base')
+        if not kb_id:
+            return Response({'error': 'Necessário informar knowledge_base'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            kb = KnowledgeBase.objects.get(id=kb_id)
+        except KnowledgeBase.DoesNotExist:
+            return Response({'error': 'KnowledgeBase não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
         session = ChatSession.objects.create(
-            user=request.user,
-            organization=member.organization,
+            user=request.user if request.user.is_authenticated else None,
+            knowledge_base=kb,
             title=request.data.get('title', 'Novo Chat')
         )
         serializer = self.get_serializer(session)
@@ -42,13 +49,16 @@ class DocumentViewSet(viewsets.ModelViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
     
     def get_queryset(self):
+        # Apenas documentos da org atual do user (para o upload modal)
         member = self.request.user.membership
-        return Document.objects.filter(organization=member.organization)
+        return Document.objects.filter(knowledge_base__organization=member.organization)
 
     def perform_create(self, serializer):
-        member = self.request.user.membership
+        kb_id = self.request.data.get('knowledge_base')
+        kb = KnowledgeBase.objects.get(id=kb_id)
+        
         serializer.save(
             uploader=self.request.user,
-            organization=member.organization,
+            knowledge_base=kb,
             filename=self.request.FILES['file'].name
         )

@@ -57,10 +57,18 @@ async function sendMessage() {
 
     if (!currentSessionId) {
         // Criar nova sessão se não houver
+        const kbSelect = document.getElementById('activeKb');
+        const kbId = kbSelect ? kbSelect.value : null;
+        
+        if (!kbId) {
+            alert("Por favor, selecione uma Base de Conhecimento antes de conversar.");
+            return;
+        }
+
         const res = await fetch('/api/chats/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify({ title: query.substring(0, 30) })
+            body: JSON.stringify({ title: query.substring(0, 30), knowledge_base: kbId })
         });
         const session = await res.json();
         currentSessionId = session.id;
@@ -97,9 +105,18 @@ async function uploadFile() {
     const status = document.getElementById('uploadStatus');
     if (fileInput.files.length === 0) return;
 
+    const kbSelect = document.getElementById('activeKb');
+    const kbId = kbSelect ? kbSelect.value : null;
+    
+    if (!kbId) {
+        alert("Por favor, selecione uma Base de Conhecimento antes de subir o PDF.");
+        return;
+    }
+
     status.innerText = 'Subindo...';
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
+    formData.append('knowledge_base', kbId);
 
     const res = await fetch('/api/documents/', {
         method: 'POST',
