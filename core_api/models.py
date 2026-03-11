@@ -53,7 +53,7 @@ class Document(models.Model):
     file = models.FileField(upload_to='documents/%Y/%m/%d/')
     filename = models.CharField(max_length=255)
     uploader = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='documents')
+    knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='documents', null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PROCESSING)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -75,7 +75,7 @@ VECTOR_DIMS = 384 if use_local else 768
 
 class VectorEntry(models.Model):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='vectors')
-    knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='vectors')
+    knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='vectors', null=True, blank=True)
     content = models.TextField()
     embedding = VectorField(dimensions=VECTOR_DIMS)
     page_number = models.IntegerField(null=True, blank=True)
@@ -88,7 +88,7 @@ class VectorEntry(models.Model):
 
 class ChatSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='chat_sessions')
+    knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='chat_sessions', null=True, blank=True)
     title = models.CharField(max_length=255, default="Novo Chat")
     created_at = models.DateTimeField(auto_now_add=True)
 
