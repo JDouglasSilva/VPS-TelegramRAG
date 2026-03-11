@@ -17,19 +17,23 @@ def login_view(request):
     return render(request, 'web_app/login.html')
 
 def chat_view(request):
-    try:
-        member = request.user.membership
-        kbs = KnowledgeBase.objects.filter(
-            Q(organization=member.organization),
-            Q(access_level__in=[KnowledgeBase.AccessLevel.PUBLIC, KnowledgeBase.AccessLevel.INTERNAL]) |
-            Q(access_level=KnowledgeBase.AccessLevel.PRIVATE, created_by=request.user) |
-            Q(organization__admin=request.user)
-        ).distinct()
-    except Member.DoesNotExist:
-        # Visitante/Convidado (Não é membro de nenhuma Org, mas logou ou caiu na home)
+    if request.user.is_authenticated:
+        try:
+            member = request.user.membership
+            kbs = KnowledgeBase.objects.filter(
+                Q(organization=member.organization),
+                Q(access_level__in=[KnowledgeBase.AccessLevel.PUBLIC, KnowledgeBase.AccessLevel.INTERNAL]) |
+                Q(access_level=KnowledgeBase.AccessLevel.PRIVATE, created_by=request.user) |
+                Q(organization__admin=request.user)
+            ).distinct()
+        except Member.DoesNotExist:
+            kbs = KnowledgeBase.objects.filter(access_level=KnowledgeBase.AccessLevel.PUBLIC)
+    else:
+        # Visitante anônimo: só vê bases públicas
         kbs = KnowledgeBase.objects.filter(access_level=KnowledgeBase.AccessLevel.PUBLIC)
-    
+
     return render(request, 'web_app/chat.html', {'knowledge_bases': kbs})
+
 
 @login_required
 def dashboard_view(request):
