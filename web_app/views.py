@@ -37,6 +37,19 @@ def chat_view(request):
 
 @login_required
 def dashboard_view(request):
+    # Superusers Django podem ver tudo, mesmo sem Member
+    if request.user.is_superuser:
+        from core_api.models import Organization
+        kbs = KnowledgeBase.objects.all()
+        members = Member.objects.all()
+        org = Organization.objects.first()
+        return render(request, 'web_app/dashboard.html', {
+            'organization': org,
+            'kbs': kbs,
+            'members': members,
+            'is_admin': True
+        })
+
     try:
         member = request.user.membership
         if member.role == Member.Role.USER:
