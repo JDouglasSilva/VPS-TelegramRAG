@@ -30,7 +30,7 @@ environ.Env.read_env(BASE_DIR / '.env', overwrite=True)
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
