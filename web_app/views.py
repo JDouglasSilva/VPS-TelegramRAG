@@ -16,7 +16,6 @@ def login_view(request):
         return render(request, 'web_app/login.html', {'error': 'Credenciais inválidas'})
     return render(request, 'web_app/login.html')
 
-@login_required
 def chat_view(request):
     try:
         member = request.user.membership
