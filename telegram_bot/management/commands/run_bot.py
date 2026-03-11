@@ -21,6 +21,7 @@ class Command(BaseCommand):
         app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("vincular", self.vincular))
         app.add_handler(CommandHandler("me", self.me))
+        app.add_handler(CommandHandler("base", self.selecionar_base))
         app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), self.chat))
         app.add_handler(MessageHandler(filters.Document.ALL, self.handle_pdf))
 
@@ -67,6 +68,46 @@ class Command(BaseCommand):
     async def me(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Seu ID do Telegram é: {update.effective_user.id}")
 
+    async def selecionar_base(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        from core_api.models import Member, KnowledgeBase
+        from asgiref.sync import sync_to_async
+
+        telegram_id = update.effective_user.id
+        try:
+            member = await sync_to_async(lambda: Member.objects.select_related('organization').get(telegram_id=telegram_id))()
+        except Member.DoesNotExist:
+            await update.message.reply_text("❌ Você precisa vincular sua conta primeiro. Use /vincular <token>")
+            return
+
+        if not context.args:
+            # Listar bases disponíveis
+            bases = await sync_to_async(list)(
+                KnowledgeBase.objects.filter(organization=member.organization)
+            )
+            if not bases:
+                await update.message.reply_text("Sua organização ainda não possui nenhuma Base de Conhecimento.")
+                return
+            
+            msg = "📚 **Bases de Conhecimento Disponíveis:**\n"
+            for b in bases:
+                msg += f"ID: `{b.id}` - {b.name} ({b.get_access_level_display()})\n"
+            msg += "\nUse `/base <ID>` para selecionar a sua base ativa para conversar ou subir PDFs."
+            from telegram.constants import ParseMode
+            await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            return
+
+        # Selecionar a base
+        kb_id = context.args[0]
+        try:
+            kb = await sync_to_async(KnowledgeBase.objects.get)(id=kb_id, organization=member.organization)
+            context.user_data['active_kb_id'] = kb.id
+            context.user_data['active_kb_name'] = kb.name
+            await update.message.reply_text(f"✅ Base de Conhecimento alterada para: **{kb.name}**", parse_mode='Markdown')
+        except KnowledgeBase.DoesNotExist:
+            await update.message.reply_text("❌ Base não encontrada ou você não tem acesso.")
+        except ValueError:
+            await update.message.reply_text("❌ ID inválido.")
+
     async def chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         from core_api.models import Member, ChatSession
         from core_api.services import ChatService
@@ -83,14 +124,26 @@ class Command(BaseCommand):
             await update.message.reply_text(f"⚠️ Erro ao encontrar sua conta: {str(e)}")
             return
 
+        active_kb_id = context.user_data.get('active_kb_id')
+        if not active_kb_id:
+            await update.message.reply_text("⚠️ Nenhuma Base de Conhecimento selecionada.\nUse o comando /base para escolher uma antes de conversar.")
+            return
+
+        try:
+            from core_api.models import KnowledgeBase
+            kb = await sync_to_async(KnowledgeBase.objects.get)(id=active_kb_id)
+        except Exception:
+            await update.message.reply_text("❌ Base de conhecimento inválida.")
+            return
+
         # Feedback imediato
         processing_msg = await update.message.reply_text("Processando sua pergunta... ⏳")
 
         try:
             session, _ = await sync_to_async(ChatSession.objects.get_or_create)(
                 user=member.user,
-                organization=member.organization,
-                title="Telegram Chat"
+                knowledge_base=kb,
+                title=f"Telegram Chat ({kb.name})"
             )
 
             service = ChatService()
@@ -122,12 +175,24 @@ class Command(BaseCommand):
             await update.message.reply_text("❌ Você precisa vincular sua conta primeiro. Use /vincular <token>")
             return
 
+        active_kb_id = context.user_data.get('active_kb_id')
+        if not active_kb_id:
+            await update.message.reply_text("⚠️ Você precisa selecionar uma Base de Conhecimento antes de subir PDFs.\nUse o comando /base")
+            return
+
+        try:
+            from core_api.models import KnowledgeBase
+            kb = await sync_to_async(KnowledgeBase.objects.get)(id=active_kb_id)
+        except Exception:
+            await update.message.reply_text("❌ Base de conhecimento inválida.")
+            return
+
         doc = update.message.document
         if not doc.file_name.lower().endswith('.pdf'):
             await update.message.reply_text("⚠️ Por favor, envie apenas arquivos no formato PDF.")
             return
 
-        status_msg = await update.message.reply_text(f"📥 Recebendo '{doc.file_name}'... ⏳")
+        status_msg = await update.message.reply_text(f"📥 Recebendo '{doc.file_name}' para a base {kb.name}... ⏳")
 
         try:
             doc_file = await doc.get_file()
@@ -137,7 +202,7 @@ class Command(BaseCommand):
             # Salva no Django
             new_doc = await sync_to_async(Document.objects.create)(
                 uploader=member.user,
-                organization=member.organization,
+                knowledge_base=kb,
                 filename=doc.file_name,
                 file=ContentFile(byte_array, name=doc.file_name)
             )
